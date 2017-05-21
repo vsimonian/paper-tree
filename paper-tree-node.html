@@ -335,7 +335,7 @@ Custom property | Description | Default
             this._setIndeterminate(indeterminate);
             if (indeterminate) {
                 this.checked = true;
-            } else if (this.data.children) {
+            } else if (this.data.children && this.data.children.length > 0) {
                 this.checked = lastChildChecked;
             }
             if (this.domHost) {
