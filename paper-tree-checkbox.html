@@ -1,0 +1,76 @@
+<link rel="import" href="../polymer/polymer.html">
+<link rel="import" href="../iron-icons/iron-icons.html">
+<link rel="import" href="../iron-icon/iron-icon.html">
+
+<!--
+`<paper-tree-checkbox>` displays a tri-state checkbox
+
+Example:
+
+    <paper-tree-checkbox></paper-tree-checkbox>
+
+@demo
+-->
+
+<dom-module id="paper-tree-checkbox">
+
+    <style>
+        :host {
+            display: inline-block;
+            cursor: pointer;
+        }
+    </style>
+
+    <template>
+        <iron-icon icon$="[[_computeIcon(value, indeterminate)]]" on-tap="select"></iron-icon>
+    </template>
+
+</dom-module>
+
+<script>
+
+    Polymer({
+
+        is: 'paper-tree-checkbox',
+
+        properties: {
+
+            /**
+             * `value` - true for checked, false for unchecked
+             */
+            value: {
+                type: Boolean,
+                value: false,
+                notify: true
+            },
+
+            /**
+             * `indeterminate` - whether or not the checkbox is indeterminate
+             */
+            indeterminate: {
+                type: Boolean,
+                value: false,
+                notify: true
+            }
+        },
+
+        /**
+         * Compute the right icon for the checkbox based on check state and
+         * indeterminate status.
+         */
+        _computeIcon: function(value, indeterminate)  {
+            return value
+                ? (indeterminate
+                    ? 'indeterminate-check-box'
+                    : 'check-box'
+                )
+                : 'check-box-outline-blank';
+        },
+
+        select: function() {
+            this.value = !this.value;
+        }
+
+    });
+
+</script>

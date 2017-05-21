@@ -5,6 +5,7 @@
 <link rel="import" href="../paper-icon-button/paper-icon-button.html">
 <link rel="import" href="../paper-menu/paper-menu.html">
 <link rel="import" href="../paper-item/paper-item.html">
+<link rel="import" href="paper-tree-checkbox.html">
 
 <!--
 `<paper-tree-node>` display a tree node with expandable/collapsible capabilities and actions menu.
@@ -111,6 +112,7 @@ Custom property | Description | Default
         <div class="node-container">
             <div class="node-row">
                 <span class$="{{_computeClass(data.*)}}" on-click="toggleChildren"></span>
+                <paper-tree-checkbox value="{{checked}}" indeterminate="[[indeterminate]]" hidden="[[!checkable]]" on-tap="checkboxSelect"></paper-tree-checkbox>
                 <iron-icon class="node-icon" icon$="{{_computeIcon(data.icon)}}" on-click="select"></iron-icon>
                 <span class="node-name" on-click="select">{{data.name}}</span>
                 <template is="dom-if" if="{{actions}}">
@@ -128,7 +130,7 @@ Custom property | Description | Default
               <ul>
                   <template is="dom-repeat" items="{{data.children}}">
                       <li>
-                          <paper-tree-node data="{{item}}" actions="{{actions}}"></paper-tree-node>
+                          <paper-tree-node data="{{item}}" actions="{{actions}}" checkable="[[checkable]]"></paper-tree-node>
                       </li>
                   </template>
               </ul>
@@ -154,13 +156,42 @@ Custom property | Description | Default
              * - `data.name`: string representing the node name.
              * - `data.icon`: string telling which icon to use (default to 'folder' icon).
              * - `data.open`: boolean telling whether the node is expanded or not.
+             * - `data.checked`: boolean indicating whether the node is checked or not.
              * - `data.children` array containing the children of the node.
              */
             data: {
                 type: Object,
                 value: function() {
                     return null;
-                }
+                },
+                observer: '_dataChanged'
+            },
+
+            /**
+             * `checkable` determines whether or not the tree displays checkboxes for each node.
+             */
+            checkable: {
+                type: Boolean,
+                value: false
+            },
+
+            /**
+             * `checked` determines whether or not the node's checkbox is checked
+             */
+            checked: {
+                type: Boolean,
+                value: false,
+                observer: '_checkedChanged'
+            },
+
+            /**
+             * `indeterminate` determines whether or not the node's checkbox is to be displayed as
+             * indeterminate.
+             */
+            indeterminate: {
+                type: Boolean,
+                value: false,
+                readOnly: true
             },
 
             /**
@@ -213,6 +244,22 @@ Custom property | Description | Default
             return icon ? icon : 'folder';
         },
 
+        _checkedChanged: function(checked) {
+            if (this.data) {
+                this.data.checked = checked;
+            }
+            if (!checked) {
+                this.indeterminate = false;
+            }
+        },
+
+        _dataChanged: function(data) {
+            if (data) {
+                this.checked = data.checked;
+                this.refreshIndeterminate();
+            }
+        },
+
         _actionClicked: function (event) {
             this.fire(event.model.item.event, this);
         },
@@ -244,6 +291,99 @@ Custom property | Description | Default
         toggleChildren: function() {
             this.set("data.open", !this.data.open && this.data.children && this.data.children.length);
             setTimeout(this.fire.bind(this, "toggle", this));
+        },
+
+        /**
+         * Refresh the indeterminate state of a node and its parents.
+         */
+        refreshIndeterminate: function() {
+            var childNodes = this.getChildren();
+            var indeterminate = null;
+            var lastChildChecked = null;
+            if (childNodes) {
+                for (var i = 0; i < childNodes.length; i++) {
+                    if (
+                        (lastChildChecked !== null && lastChildChecked !== childNodes[i].checked) ||
+                        (childNodes[i].indeterminate && childNodes[i].checked)
+                    ) {
+                        indeterminate = true;
+                        break;
+                    }
+                    lastChildChecked = childNodes[i].checked;
+                }
+            }
+            if (indeterminate === null && this.data.children) {
+                var self = this;
+                lastChildChecked = null;
+                var checkChildren = function(item) {
+                    for (var i = 0; i < item.children.length; i++) {
+                        if (lastChildChecked !== null && lastChildChecked !== item.children[i].checked) {
+                            return true;
+                        }
+                        lastChildChecked = item.children[i].checked;
+                        if (item.children[i].children) {
+                            var childIndeterminate = checkChildren(item.children[i]);
+                            if (childIndeterminate) {
+                                return true;
+                            }
+                        }
+                    }
+                    return false;
+                }
+                indeterminate = checkChildren(this.data);
+            }
+            this._setIndeterminate(indeterminate);
+            if (indeterminate) {
+                this.checked = true;
+            } else if (this.data.children) {
+                this.checked = lastChildChecked;
+            }
+            if (this.domHost) {
+                var parent = this.getParent();
+                if (parent) {
+                    parent.refreshIndeterminate();
+                }
+            }
+        },
+
+        /**
+         * Triggers when a checkbox for a node is toggled by the user.
+         */
+        checkboxSelect: function() {
+            this.toggleCheck(true);
+        },
+
+        /**
+         * Toggles check state for a node and its descendants.
+         *
+         * @param {boolean} propagate Whether or not the action should propagate to the parent and affect its indeterminate status.
+         */
+        toggleCheck: function(propagate) {
+            var childNodes = this.getChildren();
+            if (childNodes) {
+                for (var i = 0; i < childNodes.length; i++) {
+                    childNodes[i].checked = this.checked;
+                    if (!this.checked) {
+                        childNodes[i]._setIndeterminate(false);
+                    }
+                    childNodes[i].toggleCheck();
+                }
+            }
+            if (this.data.children) {
+                var self = this;
+                var checkChildren = function(item) {
+                    for (var i = 0; i < item.children.length; i++) {
+                        item.children[i].checked = self.checked;
+                        if (item.children[i].children) {
+                            checkChildren(item.children[i]);
+                        }
+                    }
+                }
+                checkChildren(this.data)
+            }
+            if (propagate) {
+                this.refreshIndeterminate();
+            }
         }
 
     });

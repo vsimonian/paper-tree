@@ -17,7 +17,7 @@ Example:
 
     <template>
         <div>
-            <paper-tree-node id="root" data="[[data]]" actions="[[actions]]"></paper-tree-node>
+            <paper-tree-node id="root" data="[[data]]" actions="[[actions]]" checkable="[[checkable]]"></paper-tree-node>
         </div>
     </template>
 
@@ -39,6 +39,7 @@ Example:
              * - `data.name`: string representing the node name.
              * - `data.icon`: string telling which icon to use (default to 'folder' icon).
              * - `data.open`: boolean telling whether the node is expanded or not.
+             * - `data.checked`: boolean indicating whether the node is checked or not.
              * - `data.children` array containing the children of the node.
              */
             data: {
@@ -47,6 +48,15 @@ Example:
                     return null;
                 },
                 observer: "_dataChanged"
+            },
+
+            /**
+             * `checkable` determines whether or not the tree displays checkboxes for each node.
+             */
+            checkable: {
+                type: Boolean,
+                value: false,
+                notify: true
             },
 
             /**
